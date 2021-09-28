@@ -1,4 +1,4 @@
-###SNIPER GAME
+# SNIPER GAME DISCORD BOT
 
 This is a bot for a game played on a few UCLA student discord servers. This bot serves the purpose of keeping track of the leaderboard, also as a database exersize for myself.
 
