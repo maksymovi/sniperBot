@@ -115,7 +115,7 @@ def createLeaderboards():
 
 async def getTop(m):
     sniperLead, snipeeLead, _ , _ = createLeaderboards()
-    sniperTable = "```\nSNIPERLEADERBOARD\nRANK    USER    SNIPES\n"
+    sniperTable = "```\nSNIPER LEADERBOARD\nRANK    USER    SNIPES\n"
     for rank, entry in enumerate(sniperLead):
         if rank >= 20:
             break
@@ -127,7 +127,7 @@ async def getTop(m):
     sniperTable += "```"
 
     #bit of boilerplate, possibly fix
-    snipeeTable = "```\nSNIPEELEADERBOARD\nRANK    USER    SNIPES\n" #wont be the nicest looking table but still should work for now
+    snipeeTable = "```\nSNIPEE LEADERBOARD\nRANK    USER    SNIPES\n" #wont be the nicest looking table but still should work for now
     for rank, entry in enumerate(snipeeLead):
         if rank >= 20: #currently only making a top 20 leaderboard
             break
