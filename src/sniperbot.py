@@ -145,17 +145,17 @@ async def getTop(m):
 async def getOwnRank(m):
     _, _, sniperLead, snipeeLead = createLeaderboards()
     rankString = ""
-    if m.user.id not in sniperLead:
+    if m.author.id not in sniperLead:
         rankString += "No snipes found"
     else:
-        rankString += str(sniperLead[m.user.id]) + " snipes by you"
+        rankString += str(sniperLead[m.author.id]) + " snipes by you"
     rankString += "    |    "
-    if m.user.id not in snipeeLead:
+    if m.author.id not in snipeeLead:
         rankString += "Never been sniped"
     else:
-        rankString += str(snipeeLead[m.user.id]) + " snipes of you"
-    if m.user.id in sniperLead and m.user.id in snipeeLead:
-        rankString += "    |    " + "KDR is " + str(round(sniperLead[m.user.id]/snipeeLead[m.user.id]))
+        rankString += str(snipeeLead[m.author.id]) + " snipes of you"
+    if m.author.id in sniperLead and m.author.id in snipeeLead:
+        rankString += "    |    " + "KDR is " + str(round(sniperLead[m.author.id]/snipeeLead[m.author.id], 3))
     await m.channel.send(rankString)
 
     
