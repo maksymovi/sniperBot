@@ -81,7 +81,7 @@ async def processSnipe(m):
                 with closing(connection.cursor()) as cursor:
                     for snipee in m.raw_mentions:
                         cursor.execute("INSERT INTO snipes VALUES (?, ?, ?, 0)", (m.id, m.author.id, snipee))
-                        connection.commit()
+                    connection.commit()
         await m.channel.send("Entry recorded")
     return
 
