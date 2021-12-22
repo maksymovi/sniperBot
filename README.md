@@ -17,3 +17,5 @@ snipe admin setChannel - sets a channel where this bot can be run
 snipe admin removeChannel - removes channel where this bot can be run
 
 snipe admin void <messageID> - voids all snipes recorded by some message ID
+
+Admin commands require server administrator priviledges.
