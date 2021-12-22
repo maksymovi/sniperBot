@@ -1,8 +1,9 @@
 .vscode/*
 *.code-workspace
 
-
 credentials.py
 
+*.db
+*.pyc
 # Local History for Visual Studio Code
 .history/

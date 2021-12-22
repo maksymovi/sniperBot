@@ -15,12 +15,13 @@ databaseLock = threading.Lock()
 
 def databaseInit():
     #makes sure database exists and is initialized if it doesn't already exist
-    if not exists("./data.db"):
+    if not exists(databaseFilename):
         with databaseLock:
             with closing(sqlite3.connect(databaseFilename)) as connection:
                 with closing(connection.cursor()) as cursor:
                     cursor.execute("CREATE TABLE channels (channelID INTEGER)")
                     cursor.execute("CREATE TABLE snipes (snipeID INTEGER, sniperID INTEGER, snipeeID INTEGER, voided BOOL)")
+                    connection.commit()
     return
 
 
@@ -41,16 +42,20 @@ async def on_message(message):
 
     splitContent = message.content.split()
     if len(splitContent) > 1 and splitContent[0] == "snipe":
-        if splitContent[1] == "admin" and message.author.guild_permissions.administrator:
-            await processAdminCommand(message)
+        print("Processing message " + message.content)
+        if splitContent[1] == "admin":
+            if message.author.guild_permissions.administrator:
+                await processAdminCommand(message)
+            else:
+                await message.channel.send("You are not an administrator, please ping an administrator if you need to issue this command.")
         else:
             #we need to grab active channels here, admin doesn't require this channel and is active everywhere, but sniper game should be
             #delegated to its specific channel
             with databaseLock:
                 with closing(sqlite3.connect(databaseFilename)) as connection:
                     with closing(connection.cursor()) as cursor:
-                        validChannels = cursor.execute("SELECT channelID FROM channels")
-            if message.channel.id in validChannels: #replace with dictionary/switch if it gets big enough
+                        validChannels = cursor.execute("SELECT channelID FROM channels").fetchall()
+            if (message.channel.id,) in validChannels: #replace with dictionary/switch if it gets big enough
                 if splitContent[1] == "leaderboard":
                     await getTop(message)
                 elif splitContent[1] == "rank":
@@ -75,7 +80,8 @@ async def processSnipe(m):
             with closing(sqlite3.connect(databaseFilename)) as connection:
                 with closing(connection.cursor()) as cursor:
                     for snipee in m.raw_mentions:
-                        cursor.execute("INSERT INTO snipes VALUES (?, ?, ?, 0)", str(m.id), + str(m.author.id), + str(m.raw_mentions[0]))
+                        cursor.execute("INSERT INTO snipes VALUES (?, ?, ?, 0)", (m.id, m.author.id, snipee))
+                        connection.commit()
         await m.channel.send("Entry recorded")
     return
 
@@ -85,10 +91,10 @@ def createLeaderboards():
     with databaseLock:
         with closing(sqlite3.connect(databaseFilename)) as connection:
             with closing(connection.cursor()) as cursor:
-                snipes = cursor.execute("SELECT sniperID, snipeeID, voided from snipes")
+                snipes = cursor.execute("SELECT * from snipes").fetchall()
     sniperMap = {}
     snipeeMap = {}
-    for sniper, snipee, voided in snipes:
+    for _, sniper, snipee, voided in snipes:
         if not voided:
             if sniper in sniperMap:
                 sniperMap[sniper] = sniperMap[sniper] + 1
@@ -99,9 +105,10 @@ def createLeaderboards():
             else:
                 snipeeMap[snipee] = 1
     sniperLeaderboard = sniperMap.items()
-    sniperLeaderboard.sort( reverse = True, key = lambda x: x[1])
+    sniperLeaderboard = sorted(sniperLeaderboard, key = lambda x: x[1], reverse=True)
+    #sniperLeaderboard.sort( reverse = True, key = lambda x: x[1])
     snipeeLeaderboard = snipeeMap.items()
-    snipeeLeaderboard.sort(reverse = True, key = lambda x: x[1])
+    snipeeLeaderboard = sorted(snipeeLeaderboard, reverse = True, key = lambda x: x[1])
     return sniperLeaderboard, snipeeLeaderboard, sniperMap, snipeeMap
 
 
@@ -114,7 +121,9 @@ async def getTop(m):
             break
         userID, snipeCount = entry
         user = client.get_user(userID)
-        sniperTable += str(rank + 1) + "    " + user.name + user.discriminator + "    " + str(snipeCount) + "\n"
+        if user is None:
+            user = await client.fetch_user(userID)
+        sniperTable += str(rank + 1) + "    " + user.name + "#" + user.discriminator + "    " + str(snipeCount) + "\n"
     sniperTable += "```"
 
     #bit of boilerplate, possibly fix
@@ -124,7 +133,9 @@ async def getTop(m):
             break
         userID, snipeCount = entry
         user = client.get_user(userID)
-        snipeeTable += str(rank + 1) + "    " + user.name + user.discriminator + "    " + str(snipeCount) + "\n"
+        if user is None:
+            user = await client.fetch_user(userID)
+        snipeeTable += str(rank + 1) + "    " + user.name + "#" + user.discriminator + "    " + str(snipeCount) + "\n"
     snipeeTable += "```"
     await m.channel.send(sniperTable)
     await m.channel.send(snipeeTable)
@@ -158,18 +169,27 @@ async def processAdminCommand(m):
             with databaseLock:
                 with closing(sqlite3.connect(databaseFilename)) as connection:
                     with closing(connection.cursor()) as cursor:
-                        cursor.execute("UPDATE snipes SET voided = 1 where snipeID = ?", splitContent[3])
+                        cursor.execute("UPDATE snipes SET voided = 1 where snipeID = (?)", (splitContent[3],))
+                        connection.commit()
+            await m.channel.send("Voided")
     elif len(splitContent) == 3:
         if splitContent[2] == "setChannel":
             with databaseLock:
                 with closing(sqlite3.connect(databaseFilename)) as connection:
                     with closing(connection.cursor()) as cursor:
-                        cursor.execute("INSERT INTO channels VALUES (?)", m.channel.id)
-        if splitContent[2] == "removeChannel":
+                        print("INSERT INTO channels(channelID) VALUES (?) ", m.channel.id)
+                        cursor.execute("INSERT INTO channels(channelID) VALUES (?)", (m.channel.id,))
+                        connection.commit()
+            await m.channel.send("Channel set")
+                        
+        elif splitContent[2] == "removeChannel":
             with databaseLock:
                 with closing(sqlite3.connect(databaseFilename)) as connection:
                     with closing(connection.cursor()) as cursor:
-                        cursor.execute("INSERT INTO channels VALUES (?)", m.channel.id)
+                        print("DELETE FROM channels WHERE channelID=(?)", m.channel.id)
+                        cursor.execute("DELETE FROM channels WHERE channelID=(?)", (m.channel.id,))
+                        connection.commit()
+            await m.channel.send("Channel removed")
 
 
 
